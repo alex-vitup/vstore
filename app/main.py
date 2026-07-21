@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 from app.api.endpoints import router as api_router
 from app.admin import setup_admin
-from app.models.base import Base
+from app.models.base import Base, User, Role
 from app.core.config import settings
-from app.core.db import engine
+from app.core.db import engine, SessionLocal
 
 # init fastApi
 app = FastAPI(title=settings.PROJECT_NAME)

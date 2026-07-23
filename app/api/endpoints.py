@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.models.base import User, Role
 from app.schemas import UserCreate, UserLogin, UserOut
+from typing import List
 
 router = APIRouter()
 
@@ -10,9 +11,36 @@ router = APIRouter()
 async def root():
     return {"message": "welcome to vstore api"}
 
-@router.get("/health")
-async def health_check():
-    return {"status": "ok"}
+# for simple front
+@router.get("/users/public")
+async def get_public_users(db: Session = Depends(get_db)):
+    users = db.query(User).all()
+    return [
+        {
+            "id": u.id,
+            "username": u.username,
+            "role_name": u.role.name
+        }
+        for u in users
+    ]
+
+
+# for admin-panel
+@router.get("/admin/users")
+async def get_admin_users(db: Session = Depends(get_db)):
+    users = db.query(User).all()
+    return [
+        {
+            "id": u.id,
+            "username": u.username,
+            "email": u.email,
+            "full_name": u.full_name,
+            "phone": u.phone,
+            "role_name": u.role.name,
+            "is_banned": u.is_banned
+        }
+        for u in users
+    ]
 
 @router.post("/auth/register", response_model=UserOut)
 async def register(user_in: UserCreate, db: Session = Depends(get_db)):

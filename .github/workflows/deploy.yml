@@ -25,11 +25,21 @@ jobs:
           docker push vstoreacr.azurecr.io/vstore-backend:${{ github.sha }}
           docker push vstoreacr.azurecr.io/vstore-backend:latest
 
-      - name: Authenticate Azure CLI
+      - name: Deploy to Azure Container App via REST API
         run: |
-          az login --service-principal -u "04b07795-8ddb-461a-bbee-02f9e1bf7b46" --tenant "1c2aa41e-5b92-4906-827e-0c10f9d73859" --allow-no-subscriptions || true
-          
-          az rest --method patch \
-            --uri "https://management.azure.com/subscriptions/$(az account list --query '[0].id' -o tsv 2>/dev/null)/resourceGroups/vstore-rg/providers/Microsoft.App/containerApps/vstore-backend?api-version=2023-05-01" \
-            --headers "Authorization=Bearer ${{ secrets.AZURE_ACCESS_TOKEN }}" "Content-Type=application/json" \
-            --body "{\"properties\":{\"template\":{\"containers\":[{\"name\":\"vstore-backend\",\"image\":\"vstoreacr.azurecr.io/vstore-backend:${{ github.sha }}\"}]}}}"
+          curl -X PATCH \
+            -H "Authorization: Bearer ${{ secrets.AZURE_ACCESS_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "properties": {
+                "template": {
+                  "containers": [
+                    {
+                      "name": "vstore-backend",
+                      "image": "vstoreacr.azurecr.io/vstore-backend:'"${{ github.sha }}"'"
+                    }
+                  ]
+                }
+              }
+            }' \
+            "https://management.azure.com/subscriptions/8a6db1d6-57a8-455a-98db-56f175eed6e8/resourceGroups/vstore-rg/providers/Microsoft.App/containerApps/vstore-backend?api-version=2023-05-01"

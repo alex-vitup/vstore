@@ -11,13 +11,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Log in to Azure
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
       - name: Log in to Azure Container Registry
-        run: az acr login --name vstoreacr
+        uses: azure/docker-login@v1
+        with:
+          login-server: vstoreacr.azurecr.io
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
 
       - name: Build and push Docker image
         run: |
@@ -26,13 +25,11 @@ jobs:
           docker push vstoreacr.azurecr.io/vstore-backend:${{ github.sha }}
           docker push vstoreacr.azurecr.io/vstore-backend:latest
 
-      - name: Deploy to Azure Container Apps
+      - name: Authenticate Azure CLI
         run: |
-          az containerapp create \
-            --name vstore-backend \
-            --resource-group vstore-rg \
-            --environment vstore-env \
-            --image vstoreacr.azurecr.io/vstore-backend:${{ github.sha }} \
-            --target-port 8000 \
-            --ingress external \
-            --env-vars DATABASE_URL="postgresql://vstoreadmin:VerySecurePassword123!@vstore-pg-server.postgres.database.azure.com:5432/vstore_db"
+          az login --service-principal -u "04b07795-8ddb-461a-bbee-02f9e1bf7b46" --tenant "1c2aa41e-5b92-4906-827e-0c10f9d73859" --allow-no-subscriptions || true
+          
+          az rest --method patch \
+            --uri "https://management.azure.com/subscriptions/$(az account list --query '[0].id' -o tsv 2>/dev/null)/resourceGroups/vstore-rg/providers/Microsoft.App/containerApps/vstore-backend?api-version=2023-05-01" \
+            --headers "Authorization=Bearer ${{ secrets.AZURE_ACCESS_TOKEN }}" "Content-Type=application/json" \
+            --body "{\"properties\":{\"template\":{\"containers\":[{\"name\":\"vstore-backend\",\"image\":\"vstoreacr.azurecr.io/vstore-backend:${{ github.sha }}\"}]}}}"

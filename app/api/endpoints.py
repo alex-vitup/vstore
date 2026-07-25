@@ -9,7 +9,7 @@ router = APIRouter()
 
 @router.get("/")
 async def root():
-    return {"message": "welcome to vstore api"}
+    return {"message": "welcome to vstore api. hello from pipeline"}
 
 # for simple front
 @router.get("/users/public")

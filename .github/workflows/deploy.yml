@@ -8,38 +8,30 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: checkout repository
         uses: actions/checkout@v4
 
-      - name: Log in to Azure Container Registry
+      - name: log in to azure container registry
         uses: azure/docker-login@v1
         with:
           login-server: vstoreacr.azurecr.io
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
-      - name: Build and push Docker image
+      - name: build and push docker image
         run: |
           docker build -t vstoreacr.azurecr.io/vstore-backend:${{ github.sha }} .
           docker build -t vstoreacr.azurecr.io/vstore-backend:latest .
           docker push vstoreacr.azurecr.io/vstore-backend:${{ github.sha }}
           docker push vstoreacr.azurecr.io/vstore-backend:latest
 
-      - name: Deploy to Azure Container App via REST API
+      - name: deploy to azure container app
         run: |
-          curl -X PATCH \
-            -H "Authorization: Bearer ${{ secrets.AZURE_ACCESS_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "properties": {
-                "template": {
-                  "containers": [
-                    {
-                      "name": "vstore-backend",
-                      "image": "vstoreacr.azurecr.io/vstore-backend:'"${{ github.sha }}"'"
-                    }
-                  ]
-                }
-              }
-            }' \
-            "https://management.azure.com/subscriptions/8a6db1d6-57a8-455a-98db-56f175eed6e8/resourceGroups/vstore-rg/providers/Microsoft.App/containerApps/vstore-backend?api-version=2023-05-01"
+          # используем токен, который у тебя уже есть
+          export AZURE_ACCESS_TOKEN=${{ secrets.AZURE_ACCESS_TOKEN }}
+          
+          az containerapp update \
+            --name vstore-backend \
+            --resource-group vstore-rg \
+            --image vstoreacr.azurecr.io/vstore-backend:${{ github.sha }} \
+            --subscription 8a6db1d6-57a8-455a-98db-56f175eed6e8

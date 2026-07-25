@@ -4,9 +4,22 @@ from app.admin import setup_admin
 from app.models.base import Base, User, Role
 from app.core.config import settings
 from app.core.db import engine, SessionLocal
+from fastapi.middleware.cors import CORSMiddleware
 
 # init fastApi
 app = FastAPI(title=settings.PROJECT_NAME)
+
+origins = [
+    "http://localhost:5173",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # db setup
 # Base.metadata.create_all(bind=engine)
